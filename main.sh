@@ -1,5 +1,33 @@
 #!/bin/bash
 
+### This script is a template for creating a script that can be used to automate the setup of a new Linux system.
+### It includes functions for handling various tasks such as changing the hostname, adding network interfaces, and more.
+
+
+### Add trap to catch errors and cleanup
+
+# Trap to catch errors and cleanup
+trap 'echo "Error: $0:$LINENO stopped"; exit 1' ERR INT TERM
+trap 'echo "Interrupted"; exit 1' INT
+trap 'if [ $reboot_needed -eq 1 ]; then echo "Reboot needed"; else echo "No reboot needed"; fi' EXIT
+
+### variable to keep track of reboot needed
+reboot_needed=0
+
+### Default network interface settings
+default_netmask="255.255.0.0"
+default_gateway="10.0.1.1"
+default_dns_primary="10.0.1.101"
+default_dns_secondary="8.8.8.8"
+#default_dns_search="
+default_dns_domain="fluxlab.systems"
+default_mtu="1500"
+default_vlan_protocol="802.1Q"
+default_vlan_flags="REORDER_HDR"
+default_vlan_encapsulated_vlan="0"
+default_vlan_encapsulated_protocol="802.1Q"
+default_vlan_encapsulated_flags="REORDER_HDR"
+default_vlan_encapsulated_encapsulation="dot1q"
 
 
 # Function to display usage information
@@ -36,6 +64,13 @@ option_c() {
 
 # Function to change the hostname
 change_hostname() {
+    read -p "Enter new FQDN (or leave blank to continue with hostname only): " new_fqdn
+    if [ -n "$new_fqdn" ]; then
+        sudo hostnamectl set-hostname "$new_fqdn" --static
+        sudo hostnamectl set-hostname "$new_fqdn" --transient
+        echo "FQDN changed to $new_fqdn"
+        return
+    fi
     read -p "Enter new hostname: " new_hostname
     sudo hostnamectl set-hostname "$new_hostname"
     echo "Hostname changed to $new_hostname"
@@ -50,19 +85,111 @@ print_network_interfaces() {
     sudo lshw -class network -short
 }
 
+# Function to query network device paths and display NET_IDs
+query_net_ids() {
+    for net_dev in /sys/class/net/*; do
+        dev_name=$(basename "$net_dev")
+        if [ "$dev_name" != "lo" ]; then
+            echo "Device: $dev_name"
+            udevadm info --query=all --path="$net_dev" | grep 'ID_NET_NAME'
+            echo ""
+        fi
+    done
+}
+
 # Function to add a network interface
 add_network_interface() {
-    read -p "Enter Ethernet connection name: " eth_name
-    read -p "Enter VLAN number: " vlan_number
-    sudo tee -a /etc/network/interfaces > /dev/null <<EOL
+    read -p "Enter Ethernet connection name (? or ?? for list or ext list): " eth_name
+    if [ "$eth_name" == "?" ]; then
+        sudo lshw -class network -short
+        read -p "Enter Ethernet connection name: " eth_name
+    fi
+    if [ "$eth_name" == "??" ]; then
+        sudo lshw -class network -short
+        query_net_ids
+        read -p "Enter Ethernet connection name: " eth_name
+    fi
+    read -p "Enter VLAN number (leave blank for none): " vlan_number
+    read -p "Enter Static IP address or blank for DHCP: " the_ip
 
-auto ${eth_name}.${vlan_number}
-iface ${eth_name}.${vlan_number} inet static
-    address 192.168.1.1
-    netmask 255.255.0.0
-    vlan-raw-device ${eth_name}
+    # with DHCP
+    if [ -z "$the_ip" ]; then 
+    ### add logic to append vlan to eth_name if present (separate function to get extended vlan info?)
+        sudo tee -a /etc/network/interfaces > /dev/null <<EOL
+            auto $eth_name
+            iface $eth_name inet dhcp
+EOL
+        echo "Network interface $eth_name added with DHCP."
+        return ### We are leaving the function here because we are done with DHCP
+    fi 
+    # end with DHCP
+
+    read -p "Enter netmask (leave blank for default - $default_netmask): " the_netmask
+    read -p "Enter gateway (leave blank for default - $default_gateway): " the_gateway
+    read -p "Enter primary DNS server (leave blank for default - $default_dns_primary): " the_dns_primary
+    read -p "Enter secondary DNS server (leave blank for default - $default_dns_secondary): " the_dns_secondary
+    read -p "Enter DNS search domain (leave blank for default - $default_dns_search): " the_dns_search
+    read -p "Enter DNS domain (leave blank for default - $default_dns_domain): " the_dns_domain
+    read -p "Enter MTU (leave blank for default $default_mtu): " the_mtu
+
+if [ -z "$the_netmask" ]; then
+        the_netmask=$default_netmask
+    fi
+    if [ -z "$the_gateway" ]; then
+        the_gateway=$default_gateway
+    fi
+    if [ -z "$the_dns_primary" ]; then
+        the_dns_primary=$default_dns_primary
+    fi
+    if [ -z "$the_dns_secondary" ]; then
+        the_dns_secondary=$default_dns_secondary
+    fi
+    if [ -z "$the_dns_search" ]; then
+        the_dns_search=$default_dns_search
+    fi
+    if [ -z "$the_dns_domain" ]; then
+        the_dns_domain=$default_dns_domain
+    fi
+    if [ -z "$the_mtu" ]; then
+        the_mtu=$default_mtu
+    fi
+
+
+
+# without vlan
+    if [ -z "$vlan_number" ]; then
+    sudo tee -a /etc/network/interfaces > /dev/null <<EOL
+        auto $eth_name
+        iface $eth_name inet static
+            address $the_ip
+            netmask $default_netmask
+            gateway $default_gateway
+            dns-nameservers $default_dns_primary $default_dns_secondary
+            dns-search $default_dns_search
+            dns-domain $default_dns_domain
+            dns-register yes
+            mtu $default_mtu
+EOL
+    echo "Network interface $eth_name added with static IP $the_ip."
+
+# with vlan    
+    else
+    sudo tee -a /etc/network/interfaces > /dev/null <<EOL
+        auto ${eth_name}.${vlan_number}
+        iface ${eth_name}.${vlan_number} inet static
+            address $the_ip
+            netmask 255.255.0.0
+            vlan-raw-device $eth_name
+            vlan-protocol $default_vlan_protocol
+            vlan-id $vlan_number
+            vlan-flags $default_vlan_flags
+            vlan-encapsulated-vlan $default_vlan_encapsulated_vlan
+            vlan-encapsulated-protocol $default_vlan_encapsulated_protocol
+            vlan-encapsulated-flags $default_vlan_encapsulated_flags
+            vlan-encapsulated-encapsulation $default_vlan_encapsulated_encapsulation
 EOL
     echo "Network interface ${eth_name}.${vlan_number} added."
+    fi
 }
 
 # Function to add a user named fluxadmin and add to sudo group
@@ -73,16 +200,83 @@ add_fluxadmin_user() {
     echo "User fluxadmin added and added to sudo group."
 }
 
+### setup network interface defaults
+# first choose between static or dynamic
+# for static display defaults and ask if they are correct
+        # gateway
+        # dns
+            # primary
+            # secondary
+            # search domain
+            # register with dhcp
+        # netmask
+        # interface
+        # vlan
+        # dhcp
+        # static
+        # bridge
+        # bond
+        # team
+        # mac
+        # mtu
+    # if correct, prompt for ip address
+    # write new defaults to /etc/network/interfaces
+    # restart networking service
+
+ # for dynamic display defaults and ask if they are correct
+        # interface
+        # vlan
+        # dhcp
+        # dns
+            # primary
+            # secondary
+            # search domain
+            # register with dhcp
+    # if not, ask for new defaults
+    # write new defaults to /etc/network/interfaces
+    # restart networking service
 
 
 
 
+### zsh and omz function
+# install zsh
+# install oh-my-zsh
+# set zsh as default shell
+    # if running as root, then do not change root shell
+    # if running as user, then change shell
+# set oh-my-zsh file and sync theme
 
-# zsh and omz function
 
-# initial update and upgrade func
+### Custom MOTD function
+### configure ASCII art
+# backup existing motd
+# get ASCII art from repo
+# set ASCII art to /etc/motd
+# get additional motd from repo
+# set motd to new motd
+# restart sshd
 
-# ssh hardening
+
+### initial update and upgrade func
+
+
+### Add trusted/root CAs
+# get trusted CAs from repo
+# add to /usr/local/share/ca-certificates
+# update-ca-certificates
+
+
+### Add to NetData
+# get netdata installer from repo
+# run installer
+# use following token: 1234567890abcdef1234567890abcdef
+
+### set system locale and timezone
+# set system locale to en_US.UTF-8 and timezone to America/New_York
+# update locale and timezone
+
+### ssh hardening
 # backup sshd_config
 # get ssh key from repo and add to authorized keys
 # change ssh port to 2202
@@ -101,7 +295,16 @@ echo -e "# Restrict key exchange, cipher, and MAC algorithms, as per sshaudit.co
 # restart sshd
 
 
-# Parse command line options
+### custom sysctl implementation
+# curl or wget the flux-sysctl.sh file from the repo, chmod +x the file, run the file
+# curl -o flux-sysctl.sh https://raw.githubusercontent.com/ethanbissbort/nix-init/main/flux-sysctl.sh
+# chmod +x flux-sysctl.sh
+# ./flux-sysctl.sh
+
+
+
+
+### Parse command line options
 while getopts "abchnid" opt; do
     case ${opt} in
         a)

@@ -116,21 +116,7 @@ net.ipv6.conf.default.max_addresses = 1
 #Set value to 1 or 2 (recommended) 
 #kernel.exec-shield = 2
 #kernel.randomize_va_space=2
- 
 
-
-# TCP and memory optimization 
-# increase TCP max buffer size setable using setsockopt()
-#net.ipv4.tcp_rmem = 4096 87380 8388608
-#net.ipv4.tcp_wmem = 4096 87380 8388608
- 
-
-
-# increase Linux auto tuning TCP buffer limits
-#net.core.rmem_max = 8388608
-#net.core.wmem_max = 8388608
-#net.core.netdev_max_backlog = 5000
-#net.ipv4.tcp_window_scaling = 1
  
 # increase system file descriptor limit    
 fs.file-max = 65535
