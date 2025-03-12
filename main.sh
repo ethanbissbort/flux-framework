@@ -132,7 +132,7 @@ EOL
     read -p "Enter DNS domain (leave blank for default - $default_dns_domain): " the_dns_domain
     read -p "Enter MTU (leave blank for default $default_mtu): " the_mtu
 
-if [ -z "$the_netmask" ]; then
+    if [ -z "$the_netmask" ]; then
         the_netmask=$default_netmask
     fi
     if [ -z "$the_gateway" ]; then
@@ -162,9 +162,9 @@ if [ -z "$the_netmask" ]; then
         auto $eth_name
         iface $eth_name inet static
             address $the_ip
-            netmask $default_netmask
-            gateway $default_gateway
-            dns-nameservers $default_dns_primary $default_dns_secondary
+            netmask $the_netmask
+            gateway $the_gateway
+            dns-nameservers $the_dns_primary $the_dns_secondary
             dns-search $default_dns_search
             dns-domain $default_dns_domain
             dns-register yes
@@ -245,7 +245,7 @@ add_fluxadmin_user() {
 # set zsh as default shell
     # if running as root, then do not change root shell
     # if running as user, then change shell
-# set oh-my-zsh file and sync theme
+# get .zshrc file and theme from repo
 
 
 ### Custom MOTD function
@@ -296,6 +296,7 @@ echo -e "# Restrict key exchange, cipher, and MAC algorithms, as per sshaudit.co
 
 
 ### custom sysctl implementation
+# backup sysctl.conf
 # curl or wget the flux-sysctl.sh file from the repo, chmod +x the file, run the file
 # curl -o flux-sysctl.sh https://raw.githubusercontent.com/ethanbissbort/nix-init/main/flux-sysctl.sh
 # chmod +x flux-sysctl.sh
