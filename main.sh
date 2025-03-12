@@ -128,7 +128,7 @@ EOL
     read -p "Enter gateway (leave blank for default - $default_gateway): " the_gateway
     read -p "Enter primary DNS server (leave blank for default - $default_dns_primary): " the_dns_primary
     read -p "Enter secondary DNS server (leave blank for default - $default_dns_secondary): " the_dns_secondary
-    read -p "Enter DNS search domain (leave blank for default - $default_dns_search): " the_dns_search
+    #read -p "Enter DNS search domain (leave blank for default - $default_dns_search): " the_dns_search
     read -p "Enter DNS domain (leave blank for default - $default_dns_domain): " the_dns_domain
     read -p "Enter MTU (leave blank for default $default_mtu): " the_mtu
 
@@ -144,9 +144,9 @@ EOL
     if [ -z "$the_dns_secondary" ]; then
         the_dns_secondary=$default_dns_secondary
     fi
-    if [ -z "$the_dns_search" ]; then
-        the_dns_search=$default_dns_search
-    fi
+    #if [ -z "$the_dns_search" ]; then
+    #    the_dns_search=$default_dns_search
+    #fi
     if [ -z "$the_dns_domain" ]; then
         the_dns_domain=$default_dns_domain
     fi
@@ -165,10 +165,9 @@ EOL
             netmask $the_netmask
             gateway $the_gateway
             dns-nameservers $the_dns_primary $the_dns_secondary
-            dns-search $default_dns_search
-            dns-domain $default_dns_domain
+            dns-domain $the_dns_domain
             dns-register yes
-            mtu $default_mtu
+            mtu $the_mtu
 EOL
     echo "Network interface $eth_name added with static IP $the_ip."
 
@@ -178,7 +177,12 @@ EOL
         auto ${eth_name}.${vlan_number}
         iface ${eth_name}.${vlan_number} inet static
             address $the_ip
-            netmask 255.255.0.0
+            netmask $the_netmask
+            gateway $the_gateway
+            dns-nameservers $the_dns_primary $the_dns_secondary
+            dns-domain $the_dns_domain
+            dns-register yes
+            mtu $the_mtu
             vlan-raw-device $eth_name
             vlan-protocol $default_vlan_protocol
             vlan-id $vlan_number
@@ -187,8 +191,12 @@ EOL
             vlan-encapsulated-protocol $default_vlan_encapsulated_protocol
             vlan-encapsulated-flags $default_vlan_encapsulated_flags
             vlan-encapsulated-encapsulation $default_vlan_encapsulated_encapsulation
+
+            echo "Configured VLAN ${vlan_number} on interface ${eth_name}" >> /var/log/network_interfaces.log
 EOL
     echo "Network interface ${eth_name}.${vlan_number} added."
+
+    echo "Network interface ${eth_name}.${vlan_number} configured successfully." >> /var/log/network_interfaces.log
     fi
 }
 
@@ -199,43 +207,6 @@ add_fluxadmin_user() {
     sudo passwd fluxadmin
     echo "User fluxadmin added and added to sudo group."
 }
-
-### setup network interface defaults
-# first choose between static or dynamic
-# for static display defaults and ask if they are correct
-        # gateway
-        # dns
-            # primary
-            # secondary
-            # search domain
-            # register with dhcp
-        # netmask
-        # interface
-        # vlan
-        # dhcp
-        # static
-        # bridge
-        # bond
-        # team
-        # mac
-        # mtu
-    # if correct, prompt for ip address
-    # write new defaults to /etc/network/interfaces
-    # restart networking service
-
- # for dynamic display defaults and ask if they are correct
-        # interface
-        # vlan
-        # dhcp
-        # dns
-            # primary
-            # secondary
-            # search domain
-            # register with dhcp
-    # if not, ask for new defaults
-    # write new defaults to /etc/network/interfaces
-    # restart networking service
-
 
 
 
