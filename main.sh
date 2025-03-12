@@ -91,7 +91,7 @@ query_net_ids() {
         dev_name=$(basename "$net_dev")
         if [ "$dev_name" != "lo" ]; then
             echo "Device: $dev_name"
-            udevadm info --query=all --path="$net_dev" | grep 'ID_NET_NAME'
+            sudo udevadm info --query=all --path="$net_dev" | grep 'ID_NET_NAME'
             echo ""
         fi
     done
@@ -200,12 +200,12 @@ EOL
     fi
 }
 
-# Function to add a user named fluxadmin and add to sudo group
+# Function to add a user named fluxadmin and add to group
 add_fluxadmin_user() {
     sudo useradd -m -s /bin/bash fluxadmin
-    sudo usermod -aG sudo fluxadmin
+    sudo usermod -aG fluxadmin fluxadmin
     sudo passwd fluxadmin
-    echo "User fluxadmin added and added to sudo group."
+    echo "User fluxadmin added and added to group."
 }
 
 
@@ -244,27 +244,61 @@ add_fluxadmin_user() {
 # use following token: 1234567890abcdef1234567890abcdef
 
 ### set system locale and timezone
-# set system locale to en_US.UTF-8 and timezone to America/New_York
-# update locale and timezone
+# Function to set system locale and timezone
+set_locale_and_timezone() {
+    # Set system locale to en_US.UTF-8
+    sudo locale-gen en_US.UTF-8
+    sudo update-locale LANG=en_US.UTF-8
+
+    # Set timezone to America/New_York
+    sudo timedatectl set-timezone America/New_York
+
+    # Restart services to apply changes
+    sudo systemctl restart rsyslog
+    sudo systemctl restart cron
+    sudo systemctl restart atd
+    sudo systemctl restart systemd-timedated
+
+    echo "Locale set to en_US.UTF-8 and timezone set to America/New_York."
+}
 
 ### ssh hardening
-# backup sshd_config
-# get ssh key from repo and add to authorized keys
-# change ssh port to 2202
-# disable root login
-# disable password authentication
-# Re-generate the ED25519 and RSA keys
-ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ""
-ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ""
-# Remove small Diffie-Hellman moduli
-awk '$5 >= 3071' /etc/ssh/moduli > /etc/ssh/moduli.safe
-mv /etc/ssh/moduli.safe /etc/ssh/moduli
-# Enable the ED25519 and RSA keys
-echo -e "\nHostKey /etc/ssh/ssh_host_ed25519_key\nHostKey /etc/ssh/ssh_host_rsa_key" >> /etc/ssh/sshd_config
-# Restrict supported key exchange, cipher, and MAC algorithms
-echo -e "# Restrict key exchange, cipher, and MAC algorithms, as per sshaudit.com\n# hardening guide.\nKexAlgorithms sntrup761x25519-sha512@openssh.com,gss-curve25519-sha256-,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha256,gss-group16-sha512-,diffie-hellman-group16-sha512\n\nCiphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-gcm@openssh.com,aes128-ctr\n\nMACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com\n\nRequiredRSASize 3072\n\nHostKeyAlgorithms sk-ssh-ed25519-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256\n\nCASignatureAlgorithms sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256\n\nGSSAPIKexAlgorithms gss-curve25519-sha256-,gss-group16-sha512-\n\nHostbasedAcceptedAlgorithms sk-ssh-ed25519-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256\n\nPubkeyAcceptedAlgorithms sk-ssh-ed25519-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256" > /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
-# restart sshd
+ssh_hardening() {
+    # Backup sshd_config
+    sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 
+    # Get SSH key from repo and add to authorized keys
+    read -p "Enter the URL of the SSH key to add: " ssh_key_url
+    curl -o /tmp/temp_ssh_key "$ssh_key_url"
+    cat /tmp/temp_ssh_key >> ~/.ssh/authorized_keys
+    rm /tmp/temp_ssh_key
+
+    # Change SSH port to 2202
+    sudo sed -i 's/#Port 22/Port 2202/' /etc/ssh/sshd_config
+
+    # Disable root login
+    sudo sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+
+    # Disable password authentication
+    sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+
+
+    # Re-generate the ED25519 and RSA keys
+    sudo ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ""
+    sudo ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ""
+    # Remove small Diffie-Hellman moduli
+    sudo cp /etc/ssh/moduli /etc/ssh/moduli.bak
+    sudo awk '$5 >= 3071' /etc/ssh/moduli > /etc/ssh/moduli.safe
+    sudo mv /etc/ssh/moduli.safe /etc/ssh/moduli
+    # Enable the ED25519 and RSA keys
+    echo -e "\nHostKey /etc/ssh/ssh_host_ed25519_key\nHostKey /etc/ssh/ssh_host_rsa_key" | sudo tee -a /etc/ssh/sshd_config
+    # Restrict supported key exchange, cipher, and MAC algorithms
+    echo -e "# Restrict key exchange, cipher, and MAC algorithms, as per sshaudit.com\n# hardening guide.\nKexAlgorithms sntrup761x25519-sha512@openssh.com,gss-curve25519-sha256-,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha256,gss-group16-sha512-,diffie-hellman-group16-sha512\n\nCiphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-gcm@openssh.com,aes128-ctr\n\nMACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com\n\nRequiredRSASize 3072\n\nHostKeyAlgorithms sk-ssh-ed25519-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256\n\nCASignatureAlgorithms sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256\n\nGSSAPIKexAlgorithms gss-curve25519-sha256-,gss-group16-sha512-\n\nHostbasedAcceptedAlgorithms sk-ssh-ed25519-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256\n\nPubkeyAcceptedAlgorithms sk-ssh-ed25519-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256" | sudo tee /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
+    # Restart SSH service to apply changes
+    sudo systemctl restart sshd
+
+    echo "SSH hardening applied successfully."
+}
 
 ### custom sysctl implementation
 # backup sysctl.conf
