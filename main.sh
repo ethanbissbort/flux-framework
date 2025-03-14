@@ -19,7 +19,6 @@ default_netmask="255.255.0.0"
 default_gateway="10.0.1.1"
 default_dns_primary="10.0.1.101"
 default_dns_secondary="8.8.8.8"
-#default_dns_search="
 default_dns_domain="fluxlab.systems"
 default_mtu="1500"
 default_vlan_protocol="802.1Q"
@@ -34,36 +33,17 @@ default_vlan_encapsulated_encapsulation="dot1q"
 usage() {
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  -a    Description for option a"
-    echo "  -b    Description for option b"
-    echo "  -c    Description for option c"
     echo "  -h    Display this help message"
     echo "  -n    Change the hostname of the system"
     echo "  -i    Print network interfaces information"
-    echo "  -d    Add a network interface"
+    echo "  -a    Add a network interface"
     exit 1
 }
 
-# Function to handle option a
-option_a() {
-    echo "Option a selected"
-    # Add your code here
-}
-
-# Function to handle option b
-option_b() {
-    echo "Option b selected"
-    # Add your code here
-}
-
-# Function to handle option c
-option_c() {
-    echo "Option c selected"
-    # Add your code here
-}
 
 # Function to change the hostname
 change_hostname() {
+    # shellcheck disable=SC2162
     read -p "Enter new FQDN (or leave blank to continue with hostname only): " new_fqdn
     if [ -n "$new_fqdn" ]; then
         sudo hostnamectl set-hostname "$new_fqdn" --static
@@ -71,6 +51,7 @@ change_hostname() {
         echo "FQDN changed to $new_fqdn"
         return
     fi
+    # shellcheck disable=SC2162
     read -p "Enter new hostname: " new_hostname
     sudo hostnamectl set-hostname "$new_hostname"
     echo "Hostname changed to $new_hostname"
@@ -99,18 +80,29 @@ query_net_ids() {
 
 # Function to add a network interface
 add_network_interface() {
+    # shellcheck disable=SC2162
     read -p "Enter Ethernet connection name (? or ?? for list or ext list): " eth_name
     if [ "$eth_name" == "?" ]; then
         sudo lshw -class network -short
+        # shellcheck disable=SC2162
         read -p "Enter Ethernet connection name: " eth_name
     fi
     if [ "$eth_name" == "??" ]; then
         sudo lshw -class network -short
         query_net_ids
+        # shellcheck disable=SC2162
         read -p "Enter Ethernet connection name: " eth_name
     fi
+    # shellcheck disable=SC2162
     read -p "Enter VLAN number (leave blank for none): " vlan_number
+    # shellcheck disable=SC2162
     read -p "Enter Static IP address or blank for DHCP: " the_ip
+    ### add logic to validate IP address
+    while [[ ! -z "$the_ip" && ! "$the_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; do
+        echo "Invalid IP address format."
+        read -p "Enter Static IP address or blank for DHCP: " the_ip
+    done
+
 
     # with DHCP
     if [ -z "$the_ip" ]; then 
@@ -128,7 +120,6 @@ EOL
     read -p "Enter gateway (leave blank for default - $default_gateway): " the_gateway
     read -p "Enter primary DNS server (leave blank for default - $default_dns_primary): " the_dns_primary
     read -p "Enter secondary DNS server (leave blank for default - $default_dns_secondary): " the_dns_secondary
-    #read -p "Enter DNS search domain (leave blank for default - $default_dns_search): " the_dns_search
     read -p "Enter DNS domain (leave blank for default - $default_dns_domain): " the_dns_domain
     read -p "Enter MTU (leave blank for default $default_mtu): " the_mtu
 
@@ -144,9 +135,6 @@ EOL
     if [ -z "$the_dns_secondary" ]; then
         the_dns_secondary=$default_dns_secondary
     fi
-    #if [ -z "$the_dns_search" ]; then
-    #    the_dns_search=$default_dns_search
-    #fi
     if [ -z "$the_dns_domain" ]; then
         the_dns_domain=$default_dns_domain
     fi
@@ -267,7 +255,14 @@ ssh_hardening() {
     # Backup sshd_config
     sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 
+    # Import SSH key from a GitHub user
+    read -p "Enter the GitHub username to import SSH key from: " github_user
+    curl -s "https://github.com/${github_user}.keys" >> ~/.ssh/authorized_keys
+    echo "SSH key(s) from GitHub user ${github_user} added to authorized keys."
+
+
     # Get SSH key from repo and add to authorized keys
+    # shellcheck disable=SC2162
     read -p "Enter the URL of the SSH key to add: " ssh_key_url
     curl -o /tmp/temp_ssh_key "$ssh_key_url"
     cat /tmp/temp_ssh_key >> ~/.ssh/authorized_keys
@@ -311,17 +306,9 @@ ssh_hardening() {
 
 
 ### Parse command line options
-while getopts "abchnid" opt; do
+while getopts "ahni" opt; do
     case ${opt} in
-        a)
-            option_a
-            ;;
-        b)
-            option_b
-            ;;
-        c)
-            option_c
-            ;;
+
         n)
             change_hostname
             ;;
@@ -331,7 +318,7 @@ while getopts "abchnid" opt; do
         h)
             usage
             ;;
-        d)
+        a)
             add_network_interface
             ;;
         *)
