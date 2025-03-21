@@ -78,6 +78,22 @@ query_net_ids() {
     done
 }
 
+
+### Function to configure network interfaces with netplan
+configure_netplan() {
+    # Get the list of network interfaces
+    echo "Available network interfaces:"
+    ip link show
+    echo ""
+
+    # Ask the user for the network interface name
+    read -p "Enter the network interface name (e.g., eth0): " interface_name
+
+    # Ask the user for the IP address and subnet mask
+    read -p "Enter the IP address and subnet mask (e.g.,
+}
+
+
 # Function to add a network interface
 add_network_interface() {
     # shellcheck disable=SC2162
