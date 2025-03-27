@@ -16,6 +16,8 @@ fi
 # b) Non zero - enabled / yes / true
 # --------------------------------------
  
+### Insert the correct tee command to put the new sysctl.conf into effect
+
 
 # Controls IP packet forwarding
 net.ipv4.ip_forward = 0

@@ -90,7 +90,7 @@ configure_netplan() {
     read -p "Enter the network interface name (e.g., eth0): " interface_name
 
     # Ask the user for the IP address and subnet mask
-    read -p "Enter the IP address and subnet mask (e.g.,
+    read -p "Enter the IP address and subnet mask (e.g., " ip_and_netmask
 }
 
 

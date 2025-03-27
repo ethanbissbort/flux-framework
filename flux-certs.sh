@@ -52,3 +52,4 @@ case $distro in
 esac
 
 echo "Certificates installed successfully."
+
