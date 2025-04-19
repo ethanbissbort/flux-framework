@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Sysctl customizations
 
 
@@ -18,6 +20,7 @@ fi
  
 ### Insert the correct tee command to put the new sysctl.conf into effect
 
+sudo tee -a /etc/sysctl.d/99-fluxsysctl.conf > /dev/null << EOL
 
 # Controls IP packet forwarding
 net.ipv4.ip_forward = 0
@@ -155,3 +158,16 @@ fs.protected_symlinks=1
 
 # permanently apply 99-fluxsysctl.conf
 sysctl -p /etc/sysctl.d/99-fluxsysctl.conf
+
+EOL
+
+echo "99-fluxsysctl.conf has been created and applied"
+echo "Please reboot the system to apply the changes"
+echo "Reboot now? (y/n)"
+read answer
+if [ "$answer" == "y" ]; then
+    reboot
+else
+    echo "Please reboot the system to apply the changes"
+fi
+# End of script

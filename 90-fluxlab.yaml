@@ -1,0 +1,14 @@
+# flux-gs1 netplan config created 2/17/2025 @ 1100
+network:
+  ethernets:
+    ens18:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+       - 10.0.1.116/16
+      routes:
+       - to: default
+         via: 10.0.1.1
+      nameservers:
+       addresses: [10.0.1.101,1.1.1.1]
+  version: 2
