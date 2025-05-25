@@ -19,7 +19,7 @@ Flux is a comprehensive system administration framework designed to automate and
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/flux-framework.git
+git clone https://github.com/ethanbissbort/flux-framework.git
 cd flux-framework
 
 # Make scripts executable
