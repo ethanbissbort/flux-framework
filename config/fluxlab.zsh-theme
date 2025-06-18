@@ -1,15 +1,15 @@
 # oh-my-zsh FluxLabs Theme
 
-_PATH="%U%F{yellow}%2~%f%u"
+_PATH="%U%F{white}%2~%f%u"
 
 if [[ $EUID -eq 0 ]]; then
   _USERNAME="%F{red}%n%f"
   _LIBERTY="%F{red}#%f"
 else
-  _USERNAME="%F{cyan}%n%f"
-  _LIBERTY="%F{green}$%f"
+  _USERNAME="%F{130}%n%f"
+  _LIBERTY="%F{116}$%f"
 fi
-_USERNAME="$_USERNAME%F{13}@%m%f"
+_USERNAME="$_USERNAME%F{10}@%m%f"
 _LIBERTY="$_LIBERTY"
 
 
@@ -23,7 +23,7 @@ get_space () {
   printf ' %.0s' {1..$SPACES}
 }
 
-_1LEFT="%K{154}$_USERNAME%k %K{57}$_PATH%k"
+_1LEFT="%B%K{153}$_USERNAME%k %K{57}$_PATH%k%b"
 _1RIGHT="[%* %w]"
 
 fluxlabs_precmd () {
