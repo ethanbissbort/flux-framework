@@ -22,8 +22,8 @@ readonly FLUX_MODULES_DIR="${FLUX_MODULES_DIR:-$SCRIPT_DIR/modules}"
 readonly FLUX_LEGACY_DIR="${FLUX_LEGACY_DIR:-$SCRIPT_DIR/legacy}"
 
 # Module naming convention
-readonly MODULE_PREFIX="flux_"
-readonly MODULE_SUFFIX="_module.sh"
+readonly MODULE_PREFIX="flux-"
+readonly MODULE_SUFFIX="module.sh"
 
 # Core components
 readonly HELPER_LIBRARY="flux-helpers.sh"
