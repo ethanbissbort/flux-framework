@@ -5,8 +5,8 @@
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$SCRIPT_DIR/flux-helpers.sh" ]]; then
-    source "$SCRIPT_DIR/flux-helpers.sh"
+if [[ -f "$SCRIPT_DIR/../flux-helpers.sh" ]]; then
+    source "$SCRIPT_DIR/../flux-helpers.sh"
 else
     echo "Error: flux-helpers.sh not found in $SCRIPT_DIR"
     exit 1
@@ -102,6 +102,22 @@ create_ascii_header() {
             ;;
         *)
             # Treat as URL or file path
+            if [[ "$art_source" =~ ^https?:// ]]; then
+                # Download from URL
+                if curl -sL "$art_source" -o "/tmp/flux_motd_art.txt" 2>/dev/null; then
+                    ascii_content=$(cat "/tmp/flux_motd_art.txt")
+                    rm -f "/tmp/flux_motd_art.txt"
+                else
+                    log_error "Failed to fetch ASCII art from URL"
+                    ascii_content="FLUX SYSTEM"
+                fi
+            elif [[ -f "$art_source" ]]; then
+                # Read from file
+                ascii_content=$(cat "$art_source")
+            else
+                # Use as literal text
+                ascii_content="$art_source"
+            fi
             if [[ "$art_source" =~ ^https?:// ]]; then
                 log_info "Downloading ASCII art from URL: $art_source"
                 if safe_download "$art_source" "/tmp/custom_ascii"; then

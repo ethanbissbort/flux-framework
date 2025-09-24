@@ -28,6 +28,39 @@ readonly MODULE_SUFFIX="-module.sh"
 # Core components
 readonly HELPER_LIBRARY="flux-helpers.sh"
 readonly CONFIG_FILE="$FLUX_CONFIG_DIR/flux.conf" # TODO: Implement config management for installs of framework. Not applicable to portable utilization.
+
+# Create default configuration
+init_config() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        mkdir -p "$(dirname "$CONFIG_FILE")"
+        cat > "$CONFIG_FILE" << 'EOCONF'
+# Flux Framework Configuration
+# Generated: $(date)
+
+# Logging Configuration
+LOG_LEVEL=1  # 0=debug, 1=info, 2=warn, 3=error
+LOGFILE="/var/log/flux-setup.log"
+
+# Color Output
+USE_COLORS=true
+
+# Module Settings
+AUTO_UPDATE_MODULES=false
+MODULE_TIMEOUT=300
+
+# Network Defaults
+DEFAULT_DNS_PRIMARY="1.1.1.1"
+DEFAULT_DNS_SECONDARY="8.8.8.8"
+
+# SSH Defaults
+DEFAULT_SSH_PORT="22"
+
+# Update Settings
+AUTO_SECURITY_UPDATES=true
+EOCONF
+        log_info "Created default configuration: $CONFIG_FILE"
+    fi
+}
 #    Items like: Default colors for output, logging levels, etc.
 
 # =============================================================================
@@ -306,9 +339,14 @@ check_system_status() {
 
 # Load configuration
 load_config() {
+    init_config
     if [[ -f "$CONFIG_FILE" ]]; then
-        log_debug "Loading configuration from: $CONFIG_FILE"
-        source "$CONFIG_FILE"
+        if bash -n "$CONFIG_FILE" 2>/dev/null; then
+            source "$CONFIG_FILE"
+            log_debug "Loaded configuration from $CONFIG_FILE"
+        else
+            log_warn "Configuration file has syntax errors, using defaults"
+        fi
     fi
 }
 

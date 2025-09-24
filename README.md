@@ -37,19 +37,19 @@ sudo ./main.sh workflow complete
 ```
 flux-framework/
 ├── main.sh                    # Core orchestrator
-├── flux_helpers.sh            # Shared helper functions
+├── flux-helpers.sh            # Shared helper functions
 ├── modules/                   # Functional modules
-│   ├── flux_network_module.sh     # Network configuration
-│   ├── flux_hostname_module.sh    # Hostname management
-│   ├── flux_user_module.sh        # User management
-│   ├── flux_ssh_module.sh         # SSH hardening
-│   ├── flux_firewall_module.sh    # Firewall configuration
-│   ├── flux_update_module.sh      # System updates
-│   ├── flux_certs_module.sh       # Certificate management
-│   ├── flux_sysctl_module.sh      # Kernel parameters
-│   ├── flux_zsh_module.sh         # ZSH installation
-│   ├── flux_motd_module.sh        # MOTD customization
-│   └── flux_netdata_module.sh     # Monitoring setup
+│   ├── flux-network-module.sh     # Network configuration
+│   ├── flux-hostname-module.sh    # Hostname management
+│   ├── flux-user-module.sh        # User management
+│   ├── flux-ssh-module.sh         # SSH hardening
+│   ├── flux-firewall-module.sh    # Firewall configuration
+│   ├── flux-update-module.sh      # System updates
+│   ├── flux-certs-module.sh       # Certificate management
+│   ├── flux-sysctl-module.sh      # Kernel parameters
+│   ├── flux-zsh-module.sh         # ZSH installation
+│   ├── flux-motd-module.sh        # MOTD customization
+│   └── flux-netdata-module.sh     # Monitoring setup
 ├── config/                    # Configuration templates
 ├── docs/                      # Documentation
 └── tests/                     # Test scripts
@@ -398,10 +398,10 @@ chmod +x main.sh modules/*.sh
 
 ```bash
 # Ensure helpers are in the correct location
-ls -la flux_helpers.sh
+ls -la flux-helpers.sh
 
 # Check for sourcing errors in logs
-grep "flux_helpers.sh not found" /var/log/flux-setup.log
+grep "flux-helpers.sh not found" /var/log/flux-setup.log
 ```
 
 ## Contributing
@@ -418,13 +418,13 @@ Contributions are welcome! Please follow these guidelines:
 
 ```bash
 #!/bin/bash
-# flux_example_module.sh - Example module
+# flux-example-module.sh - Example module
 # Version: 1.0.0
 # Description of what this module does
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/flux_helpers.sh" || exit 1
+source "$SCRIPT_DIR/flux-helpers.sh" || exit 1
 
 # Set up error handling
 setup_error_handling

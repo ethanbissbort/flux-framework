@@ -6,10 +6,10 @@
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$SCRIPT_DIR/flux_helpers.sh" ]]; then
-    source "$SCRIPT_DIR/flux_helpers.sh"
+if [[ -f "$SCRIPT_DIR/../flux-helpers.sh" ]]; then
+    source "$SCRIPT_DIR/../flux-helpers.sh"
 else
-    echo "Error: flux_helpers.sh not found in $SCRIPT_DIR"
+    echo "Error: flux-helpers.sh not found in $SCRIPT_DIR"
     exit 1
 fi
 

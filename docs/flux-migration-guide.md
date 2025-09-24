@@ -20,19 +20,19 @@ flux-scripts/
 ```
 flux-scripts/
 ├── main.sh                    # Core orchestrator only
-├── flux_helpers.sh            # Enhanced helper library
+├── flux-helpers.sh            # Enhanced helper library
 ├── modules/                   # All functional modules
-│   ├── flux_network_module.sh
-│   ├── flux_hostname_module.sh
-│   ├── flux_user_module.sh
-│   ├── flux_ssh_module.sh
-│   ├── flux_firewall_module.sh
-│   ├── flux_update_module.sh
-│   ├── flux_certs_module.sh
-│   ├── flux_sysctl_module.sh
-│   ├── flux_zsh_module.sh
-│   ├── flux_motd_module.sh
-│   └── flux_netdata_module.sh
+│   ├── flux-network-module.sh
+│   ├── flux-hostname-module.sh
+│   ├── flux-user-module.sh
+│   ├── flux-ssh-module.sh
+│   ├── flux-firewall-module.sh
+│   ├── flux-update-module.sh
+│   ├── flux-certs-module.sh
+│   ├── flux-sysctl-module.sh
+│   ├── flux-zsh-module.sh
+│   ├── flux-motd-module.sh
+│   └── flux-netdata-module.sh
 └── legacy/                    # Old scripts for compatibility
 ```
 
@@ -321,14 +321,14 @@ sudo chmod -R 755 /opt/flux
 
 ### Helper Library Issues
 
-Ensure `flux_helpers.sh` is in the same directory as the modules:
+Ensure `flux-helpers.sh` is in the same directory as the modules:
 
 ```bash
 # Each module sources helpers like this:
-source "$SCRIPT_DIR/flux_helpers.sh"
+source "$SCRIPT_DIR/flux-helpers.sh"
 
 # If using custom locations, symlink the helpers:
-ln -s /opt/flux/flux_helpers.sh /opt/flux/modules/
+ln -s /opt/flux/flux-helpers.sh /opt/flux/modules/
 ```
 
 ## Best Practices
