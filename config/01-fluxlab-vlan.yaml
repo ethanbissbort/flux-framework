@@ -1,0 +1,18 @@
+network:
+  version: 2
+  ethernets:
+    ens192:
+      dhcp4: false
+      dhcp6: false
+
+  vlans:
+    ens192.20:
+      id: 20
+      link: ens192
+      addresses:
+        - 10.0.1.120/24
+      routes:
+        - to: default
+          via: 10.0.1.1
+      nameservers:
+        addresses: [10.0.1.101, 1.1.1.1]
