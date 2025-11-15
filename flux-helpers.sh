@@ -81,6 +81,7 @@ log_debug() { log "DEBUG" $LOG_DEBUG "$CYAN" "$@"; }
 log_info() { log "INFO" $LOG_INFO "$GREEN" "$@"; }
 log_warn() { log "WARN" $LOG_WARN "$YELLOW" "$@"; }
 log_error() { log "ERROR" $LOG_ERROR "$RED" "$@"; }
+log_success() { log "SUCCESS" $LOG_INFO "$GREEN" "✓ $*"; }
 
 # =============================================================================
 # INPUT VALIDATION FUNCTIONS
@@ -170,15 +171,66 @@ validate_vlan() {
 # Validate port number (1-65535)
 validate_port() {
     local port=$1
-    
+
     if [[ ! "$port" =~ ^[0-9]+$ ]]; then
         return 1
     fi
-    
+
     if [[ $port -lt 1 || $port -gt 65535 ]]; then
         return 1
     fi
-    
+
+    return 0
+}
+
+# Validate email address
+validate_email() {
+    local email=$1
+    local regex='^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+    [[ "$email" =~ $regex ]]
+}
+
+# Validate URL
+validate_url() {
+    local url=$1
+    local regex='^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/.*)?$'
+
+    [[ "$url" =~ $regex ]]
+}
+
+# Validate CIDR notation
+validate_cidr() {
+    local cidr=$1
+
+    # Split IP and prefix
+    if [[ ! "$cidr" =~ ^([0-9.]+)/([0-9]+)$ ]]; then
+        return 1
+    fi
+
+    local ip="${BASH_REMATCH[1]}"
+    local prefix="${BASH_REMATCH[2]}"
+
+    # Validate IP part
+    validate_ip "$ip" || return 1
+
+    # Validate prefix (0-32)
+    if [[ $prefix -lt 0 || $prefix -gt 32 ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Validate username (POSIX compliant)
+validate_username() {
+    local username=$1
+
+    # Must start with letter or underscore, 1-32 chars, alphanumeric + underscore/hyphen
+    if [[ ! "$username" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+        return 1
+    fi
+
     return 0
 }
 
@@ -431,6 +483,157 @@ is_root() {
 # Check if systemd is available
 has_systemd() {
     command -v systemctl >/dev/null 2>&1
+}
+
+# Check if a command exists
+check_command() {
+    local cmd="$1"
+    local package="${2:-$cmd}"
+
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        log_error "Required command not found: $cmd"
+        log_info "Install it with your package manager (e.g., apt install $package)"
+        return 1
+    fi
+    return 0
+}
+
+# Require root privileges
+require_root() {
+    if ! is_root; then
+        log_error "This operation requires root privileges"
+        log_info "Please run with sudo or as root user"
+        exit 1
+    fi
+}
+
+# Detect package manager
+detect_package_manager() {
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "apt"
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "dnf"
+    elif command -v yum >/dev/null 2>&1; then
+        echo "yum"
+    elif command -v zypper >/dev/null 2>&1; then
+        echo "zypper"
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "pacman"
+    else
+        echo "unknown"
+        return 1
+    fi
+}
+
+# Check internet connectivity
+check_internet() {
+    local test_hosts=("8.8.8.8" "1.1.1.1" "208.67.222.222")
+
+    for host in "${test_hosts[@]}"; do
+        if ping -c 1 -W 2 "$host" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+
+    log_warn "No internet connectivity detected"
+    return 1
+}
+
+# =============================================================================
+# PACKAGE MANAGEMENT HELPERS
+# =============================================================================
+
+# Install package using detected package manager
+install_package() {
+    local package="$1"
+    local pkg_manager=$(detect_package_manager)
+
+    log_info "Installing package: $package"
+
+    case "$pkg_manager" in
+        apt)
+            sudo apt-get update -qq && sudo apt-get install -y "$package"
+            ;;
+        dnf)
+            sudo dnf install -y "$package"
+            ;;
+        yum)
+            sudo yum install -y "$package"
+            ;;
+        zypper)
+            sudo zypper install -y "$package"
+            ;;
+        pacman)
+            sudo pacman -S --noconfirm "$package"
+            ;;
+        *)
+            log_error "Unsupported package manager"
+            return 1
+            ;;
+    esac
+}
+
+# Check if package is installed
+is_package_installed() {
+    local package="$1"
+    local pkg_manager=$(detect_package_manager)
+
+    case "$pkg_manager" in
+        apt)
+            dpkg -l "$package" 2>/dev/null | grep -q ^ii
+            ;;
+        dnf|yum)
+            rpm -q "$package" >/dev/null 2>&1
+            ;;
+        zypper)
+            rpm -q "$package" >/dev/null 2>&1
+            ;;
+        pacman)
+            pacman -Q "$package" >/dev/null 2>&1
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
+# UI HELPER FUNCTIONS
+# =============================================================================
+
+# Show a spinner while running a command
+show_spinner() {
+    local pid=$1
+    local message="${2:-Processing}"
+    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
+
+    echo -n "$message "
+    while kill -0 $pid 2>/dev/null; do
+        i=$(((i + 1) % 10))
+        printf "\r%s %s" "$message" "${spin:$i:1}"
+        sleep 0.1
+    done
+    printf "\r%s ✓\n" "$message"
+}
+
+# Print a separator line
+print_separator() {
+    local char="${1:--}"
+    local width="${2:-80}"
+    printf '%*s\n' "$width" '' | tr ' ' "$char"
+}
+
+# Print a header
+print_header() {
+    local text="$1"
+    local color="${2:-$CYAN}"
+
+    echo
+    print_separator "="
+    echo -e "${color}${text}${NC}"
+    print_separator "="
+    echo
 }
 
 # =============================================================================
